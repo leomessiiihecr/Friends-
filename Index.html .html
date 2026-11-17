@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تصنيف أفضل صديق</title>
+<style>
+:root{--bg:#efe7d8;--card:#f7f1e4;--ink:#2b2418;--line:#cfc3aa;--chip:#fffaf0;--cell:#ebe2cf;--sel:#1a7f5a;
+--t0:#b08a2e;--t1:#9b5b55;--t2:#6f8a6c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17140f;--card:#211d15;--ink:#f1e9d6;--line:#41392a;--chip:#3a3224;--cell:#2a2419;--sel:#3fc38c}}
+:root[data-theme="dark"]{--bg:#17140f;--card:#211d15;--ink:#f1e9d6;--line:#41392a;--chip:#3a3224;--cell:#2a2419;--sel:#3fc38c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",Tahoma,Arial,sans-serif;padding:12px}
+h1{font-size:22px;text-align:center;margin:6px 0 4px}
+.hint{text-align:center;font-size:13px;opacity:.75;margin:0 0 12px}
+.board{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.label{width:84px;flex:none;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;padding:6px;font-weight:700;font-size:14px;outline:none}
+.cells{flex:1;display:flex;justify-content:center;gap:6px;padding:8px}
+.cell{width:calc((100% - 12px) / 3);min-height:70px;background:var(--cell);border-radius:10px;display:flex}
+.cell.over{outline:2px dashed var(--sel)}
+.cell .chip{flex:1;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center}
+.pool{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;min-height:60px}
+.pool.over{outline:2px dashed var(--sel)}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:16px;font-weight:700;cursor:grab;user-select:none;touch-action:manipulation}
+.chip.sel{outline:3px solid var(--sel)}
+.tools{display:flex;gap:8px;margin-top:14px}
+button{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--ink);font-size:14px;font-weight:700}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal[hidden]{display:none}
+.mbox{background:var(--card);border-radius:14px;padding:12px;max-width:100%;max-height:100%;overflow:auto;text-align:center}
+.mbox img{max-width:100%;border-radius:10px;display:block;margin:8px auto}
+.mbox p{margin:0;font-size:13px}
+.tools .primary{background:var(--sel);color:#fff;border:0}
+</style>
+</head>
+<body>
+<h1>تصنيف أفضل صديق</h1>
+<p class="hint">اضغط على اسم ثم اضغط على خانة، أو اسحبه (على الكمبيوتر).</p>
+<div class="board" id="board"></div>
+<div class="pool" id="pool"></div>
+<div class="tools"><button class="primary" id="shotBtn">📸 تصوير الشاشة</button><button id="reset">إعادة ضبط</button></div>
+<div class="modal" id="modal" hidden><div class="mbox"><p>اضغط مطولاً على الصورة لحفظها أو مشاركتها</p><img id="shot" alt=""><button id="closeShot">إغلاق</button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+var rows=[["شخصية متكاملة","var(--t0)",1],["شخص وسيم + عفوي","var(--t1)",3],["عفوي و يضحك","var(--t2)",3]];
+var names=["عز","دحوم","يزن","فيصل","عبود","فهد","صالح"];
+var board=document.getElementById("board"),pool=document.getElementById("pool"),selected=null,dragged=null;
+rows.forEach(function(t){
+var r=document.createElement("div");r.className="row";
+var l=document.createElement("div");l.className="label";l.style.background=t[1];l.textContent=t[0];
+var g=document.createElement("div");g.className="cells";
+for(var i=0;i<t[2];i++){var c=document.createElement("div");c.className="cell";wire(c);g.appendChild(c);}
+r.appendChild(l);r.appendChild(g);board.appendChild(r);
+});
+wire(pool);
+function isCell(z){return z.classList.contains("cell");}
+function place(c,z){
+var old=c.parentNode;if(old===z)return;
+if(isCell(z)){var ex=z.firstElementChild;if(ex)old.appendChild(ex);}
+z.appendChild(c);
+}
+function clearSel(){if(selected)selected.classList.remove("sel");selected=null;}
+function wire(z){
+z.addEventListener("click",function(e){if(selected&&e.target===z){place(selected,z);clearSel();}});
+z.addEventListener("dragover",function(e){e.preventDefault();z.classList.add("over");});
+z.addEventListener("dragleave",function(){z.classList.remove("over");});
+z.addEventListener("drop",function(e){e.preventDefault();z.classList.remove("over");if(dragged){place(dragged,z);clearSel();}});
+}
+function chip(name){
+var c=document.createElement("div");c.className="chip";c.textContent=name;c.draggable=true;
+c.addEventListener("dragstart",function(){dragged=c;});
+c.addEventListener("click",function(e){
+e.stopPropagation();
+if(selected===c){clearSel();return;}
+if(selected){place(selected,c.parentNode);clearSel();return;}
+selected=c;c.classList.add("sel");
+});
+return c;
+}
+names.forEach(function(n){pool.appendChild(chip(n));});
+document.getElementById("reset").onclick=function(){
+document.querySelectorAll(".cell .chip").forEach(function(c){pool.appendChild(c);});
+clearSel();
+};
+document.getElementById("shotBtn").onclick=function(){
+clearSel();
+if(typeof html2canvas!=="function"){alert("تعذر تحميل أداة التصوير، استخدم سكرين شوت الجوال.");return;}
+html2canvas(document.getElementById("board"),{scale:2,backgroundColor:null}).then(function(cv){
+document.getElementById("shot").src=cv.toDataURL("image/png");
+document.getElementById("modal").hidden=false;
+});
+};
+document.getElementById("closeShot").onclick=function(){document.getElementById("modal").hidden=true;};
+</script>
+</body>
+</html>
